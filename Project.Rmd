@@ -1,0 +1,1116 @@
+---
+title: "Project"
+author: "Vamshi"
+date: "2024-05-03"
+output: "html_notebook"
+---
+
+# Telecom Customer Churn Prediction. 
+
+
+# Section1: Data Cleaning & Exploration
+
+## Loading dataset and Libraries 
+```{r}
+library(readr)
+library(dplyr)
+library(forcats)
+library(caret)
+library(data.table)
+library(randomForest)
+library(glmnet)
+library(mltools)
+library(class)
+library(gmodels)
+library(keras)
+library(ROCR)
+library(iml)
+library(fairness)
+```
+
+Load dataset from the directory
+```{r}
+tlc <- read.csv("Tel.csv", stringsAsFactors = TRUE)
+View(tlc)
+```
+
+The data set includes information about:
+
+Customers who left within the last month – the column is called Churn
+Services that each customer has signed up for – phone, multiple lines, internet, online security, online backup, device protection, tech support, and streaming TV and movies
+Customer account information – how long they’ve been a customer, contract, payment method, paperless billing, monthly charges, and total charges
+Demographic info about customers – gender, age range, and if they have partners and dependents
+
+```{r}
+str(tlc)
+```
+
+```{r}
+summary(tlc)
+```
+The Dataset consists of 7043 Observations and 21 Variables of which 17 are categorical columns and 4 Numerical columns. 
+
+From the summary, Senior Citizen is refered as integer "0" No & "1" Yes can be converted as factor. 
+
+ 
+
+Removing Unnecessary columns: 
+```{r}
+tlc<-tlc[,-1]
+```
+
+Convert numeric column senior citizen to factor column.
+
+```{r}
+tlc$SeniorCitizen<-factor(ifelse(tlc$SeniorCitizen>0, "Yes", "No"))
+```
+
+Also, Tenure ranges from 1 to 72 months. can be collapsed to years as factor column.
+```{r}
+
+tlc$tenure <- fct_collapse(factor(tlc$tenure),
+                              "0-1 years" = 0:12,
+                              "1-2 years" = 13:24,
+                              "2-3years" = 25:36,
+                              "3-4 years" = 37:48,
+                              "4-5 years" = 49:60,
+                              "5-6years" = 61:72)
+
+```
+
+## Exploratory Data Analysis
+
+```{r}
+str(tlc)
+```
+
+```{r}
+tab<-table(tlc$gender, tlc$Churn)
+chisq.test(tab)
+```
+
+```{r}
+mosaicplot(tab, xlab = "gender",
+ylab="Churn", main = "Mosaic graph of Gender vs Churn")
+```
+
+```{r}
+tab<-table(tlc$SeniorCitizen, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "SeniorCitizen",
+ylab="Churn", main = "Mosaic graph of SeniorCitizen vs Churn")
+```
+
+```{r}
+tab<-table(tlc$Partner, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Partner",
+ylab="Churn", main = "Mosaic graph of Partner vs Churn")
+```
+
+```{r}
+tab<-table(tlc$Dependents, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Dependents",
+ylab="Churn", main = "Mosaic graph of Dependents vs Churn")
+```
+
+```{r}
+tab<-table(tlc$tenure, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Tenure",
+ylab="Churn", main = "Mosaic graph of Tenure vs Churn")
+```
+```{r}
+tab<-table(tlc$PhoneService, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Phoneservice",
+ylab="Churn", main = "Mosaic graph of Phoneservice vs Churn")
+```
+```{r}
+tab<-table(tlc$MultipleLines, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Multiple lines",
+ylab="Churn", main = "Mosaic graph of Multiple lines vs Churn")
+```
+```{r}
+tab<-table(tlc$InternetService, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Internet Service ",
+ylab="Churn", main = "Mosaic graph of Internet Service vs Churn")
+```
+```{r}
+tab<-table(tlc$OnlineSecurity, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Online Security ",
+ylab="Churn", main = "Mosaic graph of Online Security vs Churn")
+```
+```{r}
+tab<-table(tlc$OnlineBackup, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "OnlineBackup",
+ylab="Churn", main = "Mosaic graph of Online Backup vs Churn")
+```
+```{r}
+tab<-table(tlc$DeviceProtection, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Device Protection",
+ylab="Churn", main = "Mosaic graph of Device Protection vs Churn")
+```
+```{r}
+tab<-table(tlc$TechSupport, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Tech Support",
+ylab="Churn", main = "Mosaic graph of Tech Support vs Churn")
+```
+```{r}
+tab<-table(tlc$StreamingTV, tlc$Churn)
+chisq.test(tab)
+```
+
+```{r}
+mosaicplot(tab, xlab = "StreamingTv",
+ylab="Churn", main = "Mosaic graph of StreamingTv vs Churn")
+```
+
+```{r}
+tab<-table(tlc$StreamingMovies, tlc$Churn)
+chisq.test(tab)
+```
+
+```{r}
+mosaicplot(tab, xlab = "StreamingMovies",
+ylab="Churn", main = "Mosaic graph of StreamingMovie vs Churn")
+```
+
+```{r}
+tab<-table(tlc$Contract, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Contract",
+ylab="Churn", main = "Mosaic graph of Contract vs Churn")
+```
+
+```{r}
+tab<-table(tlc$PaperlessBilling, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "Paperlessbilling",
+ylab="Churn", main = "Mosaic graph of Paperlessbilling vs Churn")
+```
+
+```{r}
+tab<-table(tlc$PaymentMethod, tlc$Churn)
+chisq.test(tab)
+```
+```{r}
+mosaicplot(tab, xlab = "PaymentMethod",
+ylab="Churn", main = "Mosaic graph of PaymentMethod vs Churn")
+```
+
+```{r}
+t.test(tlc$MonthlyCharges ~ tlc$Churn)
+```
+```{r}
+boxplot(tlc$MonthlyCharges ~ tlc$Churn,xlab = "Churn", ylab = "Monthly Charges")
+```
+```{r}
+t.test(tlc$TotalCharges ~ tlc$Churn)
+```
+```{r}
+boxplot(tlc$TotalCharges ~ tlc$Churn,xlab = "Churn", ylab = "Total Charges")
+```
+
+
+Gender by Churn:
+
+The churn rates appear balanced between male and female customers, suggesting that gender does not have a significant impact on churn in this dataset.
+
+Senior Citizen by Churn:
+
+Senior citizens have a higher churn rate compared to non-senior citizens. This could be due to different service needs, pricing sensitivity, or possibly dissatisfaction with the available offerings. 
+
+Partner Status by Churn:
+
+Customers without partners tend to churn at a higher rate than those with partners. This might indicate that customers with partners have different needs or satisfaction levels, potentially influenced by shared decision-making or economic factors. Dependents by Churn:
+## Data Preparation. 
+```{r}
+colSums(is.na(tlc))
+```
+```{r}
+missing_percentage <- colMeans(is.na(tlc)) * 100
+```
+
+```{r}
+columns_with_missing <- names(missing_percentage[missing_percentage > 0])
+```
+
+
+```{r}
+for (col in columns_with_missing) {
+  cat(col, ": ", missing_percentage[col], "%\n")
+}
+```
+```{r}
+tlc[tlc == ""]= NA 
+mean(!complete.cases(tlc)) 
+```
+
+
+```{r}
+frq<- table(tlc$Churn)
+print(frq)
+round(prop.table(table(tlc$Churn)) * 100, digits = 1)
+```
+
+```{r}
+for (col_name in names(tlc)) {
+  if (is.factor(tlc[[col_name]])) {
+    cat("Data type of column", col_name, ":", class(tlc[[col_name]]), "\n")
+    cat("Unique values in column", col_name, ":\n")
+    print(unique(tlc[[col_name]]))
+    cat("\n")
+  }
+}
+```
+
+```{r}
+str(tlc)
+```
+
+
+
+Missing Value Imputation. 
+
+
+
+## Splitting Dataset to Train and Test sets 
+
+
+```{r}
+set.seed(1)
+inTrain = createDataPartition(tlc$Churn, p = 0.80 , list = FALSE)
+train_data = tlc[inTrain,]
+test_data = tlc[-inTrain,]
+```
+
+As the missing percentage is very less. We use mean of the variable to impute the na values 
+
+```{r}
+mean_TC<- mean(train_data$TotalCharges, na.rm = TRUE) 
+```
+
+```{r}
+train_data <- train_data %>%
+  mutate(TotalCharges = if_else(is.na(TotalCharges), mean_TC, TotalCharges))
+test_data <- test_data %>%
+  mutate(TotalCharges = if_else(is.na(TotalCharges), mean_TC, TotalCharges))
+```
+
+
+# Section2: Training ML models  
+
+###KNN Model
+
+Let's Consider Knn Model as our base model.
+
+Knn Model involves some data processing steps: One-hot-coding/dummy variables for categorcial variables.
+
+Our Initial Train and Test datesets 
+train_data
+test_data 
+
+One-hot-encoding the factor variables
+```{r}
+td_en<-one_hot(as.data.table(train_data[,1:19]), dropUnusedLevels = TRUE)
+```
+
+```{r}
+td_en<-as.data.frame(td_en)
+```
+
+```{r}
+ts_en<-one_hot(as.data.table(test_data[,1:19]),dropUnusedLevels = TRUE)
+ts_en<-as.data.frame(ts_en)
+```
+
+```{r}
+td_labels<-train_data$Churn
+tds_labels<-test_data$Churn
+```
+
+```{r}
+normalize <- function(x, min, max) {
+return ((x - min) / (max - min))
+}
+
+train_col_mins= sapply(td_en, min)
+train_col_maxs= sapply(td_en,max)
+
+td_en=as.data.frame(mapply(normalize, td_en,
+train_col_mins, train_col_maxs ))
+
+ts_en=as.data.frame(mapply(normalize, ts_en,
+train_col_mins, train_col_maxs ))
+
+```
+
+```{r}
+set.seed(1)
+ts_preds<- knn(train = td_en, test = ts_en,cl =
+td_labels, k = 75, prob = FALSE, use.all = TRUE)
+ 
+CrossTable(x = tds_labels, y = ts_preds,
+prop.chisq=FALSE)
+```
+```{r}
+conf_matrix <- confusionMatrix(factor(tds_labels), factor(ts_preds), positive = "Yes", mode = "everything")
+print(conf_matrix)
+```
+
+
+
+
+The Auc of the model is 77%
+The model metrics for postive class 
+Precision - 0.54
+Recall - 0.57
+f1 Score - 0.55
+
+### Creating Regularized Logistic Regression Models. 
+
+Considering Our Initial train_data and test_data. Train data has 80% and test data has 20% 
+
+We can see that our Target variable Churn is highly Imbalanced, we'll use SMOTE or Class Weights 
+
+Our target variable Churn is highly imbalanced lets use class Weights. Later, we'll also use smote for tree based models. 
+```{r}
+tab = table(train_data$Churn)
+tab
+```
+```{r}
+w_yes = sum(tab)/(tab["Yes"]*2)
+w_no = sum(tab)/(tab["No"]*2)
+```
+
+```{r}
+cw = ifelse(train_data$Churn=="Yes", w_yes, w_no)
+```
+
+#### Lasso Logistic Regression 
+```{r}
+set.seed(1)
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary)
+lasso <- train(Churn ~., data = train_data, method = "glmnet", 
+               trControl=ctrl,
+               tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, 3, length = 100)), weights = cw, verbose = FALSE, metric = "ROC")
+
+
+```
+
+```{r}
+set.seed(1)
+lasso_preds=predict(lasso, test_data)
+confusionMatrix(lasso_preds,test_data$Churn, positive = "Yes", mode = "everything")
+```
+
+```{r}
+set.seed(1)
+lasso_predictions_prob=predict(lasso, test_data,type = "prob")
+head(lasso_predictions_prob)
+```
+
+```{r}
+set.seed(1)
+pred_t_lasso <- prediction(lasso_predictions_prob$Yes,test_data$Churn)
+performance(pred_t_lasso, measure = "auc")@y.values
+```
+
+```{r}
+set.seed(1)
+coef(lasso$finalModel, lasso$bestTune$lambda)
+```
+Lasso shrinks 2 variables to 0. which indicates the variable is not significant.
+
+The AUC of the model is 82.5 
+The metrics for Churn = Yes : 
+Precision - 0.50
+Recall - 0.76
+F1 Score - 0.60
+
+
+```{r}
+set.seed(1)
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary)
+ridge <- train(
+Churn ~., data = train_data, method = "glmnet",
+trControl = ctrl,
+tuneGrid = expand.grid(alpha = 0, lambda = 10^seq(-3, 3, length =
+100)), weights = cw, verbose = FALSE, metric = "ROC")
+```
+
+```{r}
+set.seed(1)
+ridge_preds=predict(ridge, test_data)
+confusionMatrix(ridge_preds,test_data$Churn,positive = "Yes", mode= "everything")
+```
+
+```{r}
+set.seed(1)
+ridge_preds_prob=predict(ridge, test_data,type = "prob")
+pred_t_ridge <- prediction(ridge_preds_prob$Yes,test_data$Churn)
+performance(pred_t_ridge, measure = "auc")@y.values
+```
+
+```{r}
+set.seed(1)
+coef(ridge$finalModel, ridge$bestTune$lambda)
+```
+
+The AUC of the model is 82.4 
+The metrics for Churn = Yes : 
+Precision - 0.49
+Recall - 0.76
+F1 Score - 0.60
+
+
+Enet
+```{r}
+set.seed(1)
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary)
+enet <- train(
+Churn ~., data = train_data, method = "glmnet",
+trControl = ctrl,
+tuneGrid = expand.grid(alpha =seq(0,1, length=10), lambda =
+10^seq(-3, 3, length = 100)),weights = cw, verbose = FALSE, metric = "ROC")
+
+```
+
+```{r}
+set.seed(1)
+enet_predictions=predict(enet, test_data)
+confusionMatrix(enet_predictions,test_data$Churn,positive = "Yes", mode ="everything")
+```
+
+```{r}
+set.seed(1)
+enet_predictions_prob=predict(enet, test_data,type = "prob")
+pred_t_enet <- prediction(enet_predictions_prob$Yes,test_data$Churn)
+performance(pred_t_enet, measure = "auc")@y.values
+
+```
+
+```{r}
+set.seed(1)
+coef(enet$finalModel, enet$bestTune$lambda)
+```
+
+Enet shrinks one variable to zero.
+
+The AUC of the model is 82.5 
+The metrics for Churn = Yes : 
+Precision - 0.50
+Recall - 0.76
+F1 Score - 0.60
+
+### Random Forest with Class weights
+
+```{r}
+set.seed(1)
+rf <- randomForest(Churn ~ ., data = train_data)
+rf
+```
+The out of bag error here is 20.19% which is low.
+
+```{r}
+set.seed(1)
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary)
+grid_rf <- expand.grid(mtry = c(2, 4, 8, 16))
+
+set.seed(1)
+m_rf <- train(Churn ~ ., data = train_data, method = "rf", trControl = ctrl, tuneGrid = grid_rf,importance=T,weights = cw, verbose = FALSE, metric = "ROC")
+m_rf
+```
+The Auc for random forest with class weights is 83.7 at mtry = 4.
+
+```{r}
+set.seed(1)
+rf_predictions=predict(m_rf, test_data)
+table(rf_predictions, test_data$Churn)
+
+```
+
+```{r}
+set.seed(1)
+rf_predictions_prob=predict(m_rf, test_data, type="prob")
+pred_t_rf=prediction(rf_predictions_prob$Yes,test_data$Churn)
+performance(pred_t_rf, measure = "auc")@y.values
+```
+
+```{r}
+set.seed(1)
+confusionMatrix(rf_predictions,test_data$Churn,positive = "Yes", mode = "everything")
+```
+The AUC of the model is 81.2 
+The metrics for Churn = Yes : 
+Precision - 0.60
+Recall - 0.48
+F1 Score - 0.53
+```{r}
+varImp(m_rf)
+```
+
+Let's also Consider smote class imbalance method 
+
+
+```{r}
+set.seed(1)
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary,sampling = "smote")
+grid_rf <- expand.grid(mtry = c(2, 4, 8, 16))
+
+set.seed(1)
+smote_rf <- train(Churn ~ ., data = train_data, method = "rf", trControl = ctrl, tuneGrid = grid_rf,importance=T, verbose = FALSE, metric = "ROC")
+smote_rf
+```
+
+The best AUC is 84.1 at mtry = 4
+```{r}
+set.seed(1)
+smote_rf_predictions=predict(smote_rf, test_data)
+table(smote_rf_predictions, test_data$Churn)
+
+```
+
+
+```{r}
+set.seed(1)
+smote_rf_predictions_prob=predict(smote_rf, test_data, type="prob")
+pred_smote_rf=prediction(smote_rf_predictions_prob$Yes,test_data$Churn)
+performance(pred_smote_rf, measure = "auc")@y.values
+```
+```{r}
+set.seed(1)
+confusionMatrix(smote_rf_predictions,test_data$Churn,positive = "Yes", mode="everything")
+```
+
+
+```{r}
+varImp(m_rf)
+```
+
+The AUC of the model is 82.4 
+The metrics for Churn = Yes : 
+Precision - 0.57
+Recall - 0.52
+F1 Score - 0.54
+
+
+```{r}
+varImp(smote_rf)
+```
+
+### Gradient boosting machine class weights
+```{r}
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(1)
+gbm <- train(
+Churn ~., data = train_data, method = "gbm",
+trControl = ctrl,weights = cw,verbose=FALSE, metric ="ROC")
+```
+
+```{r}
+gbm
+```
+
+```{r}
+set.seed(1)
+gbm_predictions=predict(gbm, test_data)
+table(gbm_predictions, test_data$Churn)
+```
+
+```{r}
+set.seed(1)
+gbm_predictions_prob=predict(gbm, test_data, type="prob")
+pred_t_gbm=prediction(gbm_predictions_prob$Yes,test_data$Churn)
+performance(pred_t_gbm, measure = "auc")@y.values
+```
+
+```{r}
+confusionMatrix(gbm_predictions,test_data$Churn,positive = "Yes", mode= "everything")
+```
+The AUC of the model is 83.3 
+The metrics for Churn = Yes : 
+Precision - 0.50
+Recall - 0.80
+F1 Score - 0.61
+
+
+
+Gradient Boosting machine Using smote.
+```{r}
+
+ctrl=trainControl(method="cv", number=10, classProbs = TRUE, summaryFunction = twoClassSummary,
+sampling="smote")
+set.seed(1)
+smote_gbm<-train(Churn ~ ., data = train_data, method = "gbm", verbose=FALSE, metric ="ROC",
+trControl= ctrl)
+
+```
+
+
+```{r}
+set.seed(1)
+smote_gbm_predictions=predict(smote_gbm, test_data)
+table(smote_gbm_predictions, test_data$Churn)
+```
+
+```{r}
+set.seed(1)
+s_gbm_predictions_prob=predict(smote_gbm, test_data, type="prob")
+pred_s_gbm=prediction(s_gbm_predictions_prob$Yes,test_data$Churn)
+performance(pred_s_gbm, measure = "auc")@y.values
+```
+
+
+```{r}
+confusionMatrix(smote_gbm_predictions,test_data$Churn,positive = "Yes", mode ="everything")
+```
+The AUC of the model is 83.1 
+The metrics for Churn = Yes : 
+Precision - 0.60
+Recall - 0.59
+F1 Score - 0.59
+
+
+SVM Models - Class weights 
+```{r}
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary,preProc=c("center","scale"))
+set.seed(1)
+svml <- train(Churn ~., data = train_data, method = "svmLinear", 
+              trControl = ctrl,weights = cw, verbose=FALSE, metric ="ROC" )
+```
+
+```{r}
+svml
+```
+
+
+```{r}
+set.seed(1)
+svml_predictions=predict(svml, test_data)
+table(svml_predictions, test_data$Churn)
+```
+
+
+```{r}
+set.seed(1)
+svml_predictions_prob = predict(svml, test_data, type = "prob")
+svml_y_predictions = prediction(svml_predictions_prob$Yes, test_data$Churn)
+performance(svml_y_predictions, measure = "auc")@y.values
+```
+
+
+```{r}
+confusionMatrix(svml_predictions, test_data$Churn, positive = 'Yes', mode="everything")
+```
+The AUC of the model is 80.0
+The metrics for Churn = Yes : 
+Precision - 0.58
+Recall - 0.40
+F1 Score - 0.47
+
+SVMRadial 
+
+```{r}
+ctrl= trainControl(method ="cv", number = 10,classProbs = TRUE, summaryFunction = twoClassSummary,preProc=c("center","scale"))
+set.seed(1)
+svmr <- train(Churn ~., data = train_data, method = "svmRadial", 
+              trControl = ctrl,weights = cw,verbose=FALSE, metric ="ROC" )
+
+```
+
+
+```{r}
+set.seed(1)
+svmr_predictions_prob = predict(svmr, test_data, type = "prob")
+svmr_y_predictions = prediction(svmr_predictions_prob$Yes, test_data$Churn)
+performance(svmr_y_predictions, measure = "auc")@y.values
+```
+```{r}
+set.seed(1)
+svmr_predictions=predict(svmr, test_data)
+table(svmr_predictions, test_data$Churn)
+```
+
+```{r}
+set.seed(1)
+confusionMatrix(svmr_predictions, test_data$Churn, positive = 'Yes', mode = "everything")
+```
+
+The AUC of the model is 79 
+The metrics for Churn = Yes : 
+Precision - 0.61
+Recall - 0.38
+F1 Score - 0.47
+
+```{r}
+compare=resamples(list(L=lasso,R=ridge,E=enet,Rf= m_rf, smoterf= smote_rf, Gbm=gbm,smotegbm = smote_gbm, svmLinear=svml, svmRadial = svmr))
+summary(compare)
+```
+
+
+## Creating a Neural Network Model
+
+```{r}
+td<-train_data
+ts<-test_data
+```
+
+```{r}
+str(td)
+```
+
+```{r}
+factor_levels <- lapply(td[sapply(td, is.factor)], levels)
+
+
+print(factor_levels)
+```
+Lets convert the target variable to 0 & 1 
+
+```{r}
+td$Churn=as.numeric(td$Churn)-1
+
+```
+Converting Ordered columns to numeric
+
+```{r}
+
+td$tenure <- as.numeric(factor(td$tenure, levels =
+c("0-1 years", "1-2 years", "2-3years",  "3-4 years", "4-5 years", "5-6years" ), ordered = TRUE))-1
+```
+
+
+```{r}
+labels<-td$Churn
+```
+
+```{r}
+
+td=data.frame(one_hot(data.table(td)))
+```
+
+
+```{r}
+str(td)
+```
+
+```{r}
+td$Churn<-NULL
+```
+
+```{r}
+set.seed(1)
+in_train=createDataPartition(labels, p=0.9, list=FALSE)
+x_train=td[in_train,]
+y_train= labels[in_train]
+x_test=td[-in_train,]
+y_test= labels[-in_train]
+```
+
+```{r}
+numeric_cols<-names(x_train[sapply(x_train, is.numeric) & !sapply(x_train, is.integer)])
+col_means_train <- attr(scale(x_train[,numeric_cols]), "scaled:center")
+col_stddevs_train <- attr( scale(x_train[,numeric_cols]), "scaled:scale")
+x_train[numeric_cols]= scale(x_train[numeric_cols])
+x_test[numeric_cols]<- scale(x_test[numeric_cols], center = col_means_train,
+scale = col_stddevs_train)
+```
+
+```{r}
+library(keras)
+set.seed(1)
+model <- keras_model_sequential() %>%
+layer_dense(units = 16, activation = "relu",
+input_shape = dim(x_train)[2]) %>%
+layer_dropout(0.2)%>%
+layer_dense(units = 32,activation="relu" ) %>%
+layer_dropout(0.5)%>%
+layer_dense(units = 1, activation="sigmoid")
+```
+
+```{r}
+set.seed(1)
+model %>% compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = "acc")
+model
+```
+
+```{r}
+set.seed(1)
+history <- model %>% fit(
+  as.matrix(x_train), y_train, epochs = 30, batch_size = 50,verbose = 2, validation_data=list(as.matrix(x_test), y_test))
+```
+
+```{r}
+set.seed(1)
+predicted_probs = model%>% predict(as.matrix(x_test))
+preds_labels = factor(ifelse(predicted_probs>0.5, "1", "0"))
+confusionMatrix(preds_labels, as.factor(y_test),  positive="1",mode = "everything")
+```
+The Auc of the model is 79
+the model metrics for positive class 
+precision = 0.70
+recall = 0.44
+f1score = 0.54
+
+Let's use class weights 
+
+```{r}
+library(keras)
+set.seed(1)
+model2 <- keras_model_sequential() %>%
+layer_dense(units = 16, activation = "relu",
+input_shape = dim(x_train)[2]) %>%
+layer_dropout(0.2)%>%
+layer_dense(units = 32,activation="relu" ) %>%
+layer_dropout(0.5)%>%
+layer_dense(units = 1, activation="sigmoid")
+```
+
+```{r}
+set.seed(1)
+model2 %>% compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = "acc")
+model2
+```
+
+
+```{r}
+set.seed(1)
+history <- model2 %>% fit(
+  as.matrix(x_train), y_train, epochs = 30, batch_size = 50,verbose = 2, validation_data=list(as.matrix(x_test), y_test),class_weight = list("0"=w_no, "1"=w_yes))
+```
+
+```{r}
+set.seed(1)
+predicted_probs = model2%>% predict(as.matrix(x_test))
+preds_labels = factor(ifelse(predicted_probs>0.5, "1", "0"))
+confusionMatrix(preds_labels, as.factor(y_test),  positive="1",mode = "everything")
+```
+The auc of the model is 75
+
+The metrics of model for yes class : 
+precision = 0.54
+recall = 0.79
+f1score = 0.64
+
+Comparatively model with class weights Recall value is higher than imbalanced class lets consider training hyper parameter tuning using class weights 
+
+### Tune-Hyperparameters 
+```{r}
+library(tfruns)
+set.seed(1)
+runs <- tuning_run("Projectscript.R",
+                   flags = list(
+                     nodes = c(16, 32, 64),
+                     nodes2 = c(16, 32, 64),
+                     learning_rate = c(0.01, 0.001),
+                     batch_size = c(20, 50),
+                     epochs = c(30, 50),
+                     activation = c("relu", "sigmoid", "tanh"),
+                     activation2 = c("relu", "sigmoid", "tanh"),
+                     dropout = c(0.2, 0.5),
+                     dropout2 = c(0.2, 0.5)
+                   ), sample = 0.02
+                   )
+```
+```{r}
+set.seed(1)
+runs= runs[order(runs$metric_val_loss),]
+runs
+```
+
+```{r}
+set.seed(1)
+runs[which.min(runs$metric_val_loss),]
+```
+
+```{r}
+set.seed(1)
+view_run(runs[which.min(runs$metric_val_loss),])
+```
+Lets train our best model 
+nodes1 - 64
+nodes2-64
+epochs-30
+batch_size=20
+activation function1 = "sigmoid"
+activation function2 = "sigmoid"
+dropout rate1 = 0.5
+dropout rate2 = 0.5
+learning rate = 0.001
+
+```{r}
+ts$Churn=as.numeric(ts$Churn)-1
+```
+Converting Ordered columns to numeric
+
+```{r}
+
+ts$tenure <- as.numeric(factor(ts$tenure, levels =
+c("0-1 years", "1-2 years", "2-3years",  "3-4 years", "4-5 years", "5-6years" ), ordered = TRUE))-1
+```
+
+
+```{r}
+ts_labels<-ts$Churn
+```
+
+```{r}
+
+ts= data.frame(one_hot(data.table(ts)))
+```
+
+```{r}
+ts$Churn<-NULL
+```
+
+
+```{r}
+numeric_cols<-names(td[sapply(td, is.numeric) & !sapply(td, is.integer)])
+
+col_means_train <- attr(scale(td[,numeric_cols]), "scaled:center")
+col_stddevs_train <- attr( scale(td[,numeric_cols]), "scaled:scale")
+td[numeric_cols]= scale(td[numeric_cols])
+ts[numeric_cols]<- scale(ts[numeric_cols], center = col_means_train,
+scale = col_stddevs_train)
+```
+
+
+
+```{r}
+set.seed(1)
+model_nn <- keras_model_sequential() %>%
+layer_dense(units = 64, activation = "sigmoid",
+input_shape = dim(td)[2]) %>%
+layer_dropout(0.5)%>%
+layer_dense(units = 64,activation="sigmoid" ) %>%
+layer_dropout(0.5)%>%
+layer_dense(units = 1, activation="sigmoid")
+model_nn
+```
+
+
+```{r}
+set.seed(1)
+```
+
+```{r}
+model_nn %>% compile(optimizer = optimizer_adam(lr = 0.001), loss = "binary_crossentropy", metrics = "acc")
+
+model_nn %>% fit(
+  as.matrix(td), labels, epochs = 30, batch_size = 20, validation_data=list(as.matrix(ts), ts_labels))
+```
+
+```{r}
+set.seed(1)
+predicted_probs = model_nn%>% predict(as.matrix(ts))
+```
+
+```{r}
+set.seed(1)
+predictions_nn = prediction(predicted_probs, ts_labels)
+performance(predictions_nn, measure = "auc")@y.values
+```
+
+```{r}
+set.seed(1)
+predicted_labels = factor(ifelse(predicted_probs>0.5, "1", "0"))
+confusionMatrix(predicted_labels, as.factor(ts_labels), positive="1", mode="everything")
+```
+The AUC of the model is 82.7 
+The mectrics of the model are 
+precision - 0.60
+recall- 0.46
+f1 score- 0.52
+
+KNN (base): Achieved an AUC of 77 with moderate precision, recall, and F1-score.
+Lasso, Ridge, Enet: All three achieved similar performance with slightly higher AUC compared to KNN.
+Random Forest (RF): Achieved better AUC with class weighting (CW) and SMOTE techniques.
+Gradient Boosting Machine (GBM): GBM showed the highest AUC among all models, especially when combined with SMOTE, with good precision, recall, and F1-score.
+Support Vector Machine (SVM): SVM with linear and radial kernels performed moderately well but didn't outperform GBM.
+Neural Network: The initial neural network model showed decent performance, which was further improved with class weighting (CW).
+
+In conclusion, the Gradient Boosting Machine with SMOTE stands out as the best-performing model for churn prediction, with a high AUC and a good balance between precision and recall. This model could be deployed for churn prediction tasks to effectively identify potential churners.
+
+
+
+###shapely Values
+```{r}
+mod <- Predictor$new(smote_gbm, data = test_data, type = "prob")
+
+
+shapley <- Shapley$new(mod, x.interest = test_data[1:100, ])
+
+
+print(shapley)
+```
+
+```{r}
+shapley$results
+```
+```{r}
+plot(shapley)
+```
+
+
+```{r}
+test_data$predicted_probabilities = predict(smote_gbm, test_data, type="prob")$Yes
+dem_parity(data= test_data,outcome='Churn',group='SeniorCitizen',probs='predicted_probabilities',cutoff=0.5,base='No')
+```
+
+```{r}
+equal_odds(data= test_data,outcome='Churn',group='SeniorCitizen',probs='predicted_probabilities',cutoff=0.5,base='No')
+```
+
+
+```{r}
+pred_rate_parity(data= test_data,outcome='Churn',group='SeniorCitizen',probs='predicted_probabilities',cutoff=0.5,base='No')
+```
+
+```{r}
+test_data$predicted_probabilities = predict(smote_gbm, test_data, type="prob")$Yes
+dem_parity(data= test_data,outcome='Churn',group='Partner',probs='predicted_probabilities',cutoff=0.5,base='No')
+```
+
+```{r}
+equal_odds(data= test_data,outcome='Churn',group='Partner',probs='predicted_probabilities',cutoff=0.5,base='No')
+```
+
+```{r}
+pred_rate_parity(data= test_data,outcome='Churn',group='Partner',probs='predicted_probabilities',cutoff=0.5,base='No')
+```
+
